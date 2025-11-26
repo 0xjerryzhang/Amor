@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>心晴花园</title>
+    
+    <!-- PWA 设置：让它看起来像个 APP -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#fdf2f8"> <!-- 这里的颜色匹配背景色 -->
+    <link rel="apple-touch-icon" href="https://api.iconify.design/lucide:heart.svg?color=%23fda4af">
+    <link rel="icon" type="image/png" href="https://api.iconify.design/lucide:heart.svg?color=%23fda4af">
+
+    <!-- 核心库 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 字体与动画样式 -->
+    <style>
+        /* 隐藏滚动条但保留功能 */
+        .scrollbar-hide::-webkit-scrollbar { display: none; }
+        .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 动画定义 */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0) scale(1); } 100% { opacity: 0; transform: translateY(-40px) scale(1.2); } }
+        @keyframes pulse-slow { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
+
+        .animate-fade-in { animation: fadeIn 0.8s ease-out; }
+        .animate-fade-in-up { animation: fadeInUp 0.8s ease-out; }
+        .animate-slide-up { animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .animate-float-up { animation: floatUp 0.8s ease-out forwards; }
+        .animate-pulse-slow { animation: pulse-slow 3s infinite; }
+
+        /* 禁止 iOS 长按选中文本，更有 App 质感 */
+        body { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+        input, textarea { -webkit-user-select: text; user-select: text; }
+    </style>
+</head>
+<body class="bg-[#fdf2f8] h-screen overflow-hidden">
+    <div id="root" class="h-full"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- 简单的 SVG 图标组件 (替代 lucide-react 以减少依赖) ---
+        const Icon = ({ name, size = 24, className = "", fill = "none" }) => {
+            const paths = {
+                heart: <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />,
+                wind: <><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"/><path d="M9.6 4.6A2 2 0 1 1 11 8H2"/><path d="M12.6 19.4A2 2 0 1 0 14 16H2" /></>,
+                book: <><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>,
+                phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />,
+                home: <><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22" /></>,
+                smile: <><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></>,
+                sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></>,
+                moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />,
+                cloud: <path d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.2-2.3-2.1-4-4.4-4H8.5c-2.5 0-4.5 2-4.5 4.5v.5a3 3 0 0 0 0 6h9a3 3 0 0 0 3-3Z" />,
+                refresh: <><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></>,
+                x: <><path d="M18 6 6 18"/><path d="m6 6 12 12"/></>,
+                music: <><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>,
+                toggle: <><rect width="20" height="12" x="2" y="6" rx="6" ry="6"/><circle cx="8" cy="12" r="2"/></>,
+                settings: <><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.73v.51a2 2 0 0 1-1 1.73l-.15.1a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.38a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.73v-.51a2 2 0 0 1 1-1.73l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>,
+                chevron: <path d="m9 18 6-6-6-6"/>,
+                feather: <><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></>,
+                sparkles: <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z"/>
+            };
+
+            return (
+                <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {paths[name]}
+                </svg>
+            );
+        };
+
+        // --- 全局样式常量 ---
+        const GLASS_STYLE = "bg-white/70 backdrop-blur-xl border border-white/50 shadow-lg";
+        const BUTTON_TOUCH = "active:scale-95 transition-all duration-200";
+
+        const MindfulGarden = () => {
+            const [activeTab, setActiveTab] = useState('home');
+            const [showWelcome, setShowWelcome] = useState(true);
+            const [partnerPhone, setPartnerPhone] = useState('');
+
+            const getGreeting = () => {
+                const hour = new Date().getHours();
+                if (hour < 6) return "凌晨了，世界很安静";
+                if (hour < 11) return "早安，今天的阳光很温柔";
+                if (hour < 14) return "午安，记得小憩一下";
+                if (hour < 19) return "傍晚好，看窗外的云了吗";
+                return "晚安，把烦恼都放下吧";
+            };
+
+            useEffect(() => {
+                const savedPhone = localStorage.getItem('partner_phone');
+                if (savedPhone) setPartnerPhone(savedPhone);
+                const timer = setTimeout(() => setShowWelcome(false), 2200);
+                return () => clearTimeout(timer);
+            }, []);
+
+            const savePhone = (number) => {
+                setPartnerPhone(number);
+                localStorage.setItem('partner_phone', number);
+            };
+
+            if (showWelcome) return <WelcomeScreen />;
+
+            return (
+                <div className="flex flex-col h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 font-sans text-slate-600 w-full overflow-hidden relative">
+                    <div className="absolute top-[-10%] right-[-10%] w-64 h-64 bg-purple-200/30 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className="absolute bottom-[10%] left-[-10%] w-64 h-64 bg-teal-100/40 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <main className="flex-1 overflow-y-auto p-6 pb-28 scrollbar-hide z-10 max-w-lg mx-auto w-full">
+                        {activeTab === 'home' && <HomeView greeting={getGreeting()} changeTab={setActiveTab} />}
+                        {activeTab === 'breathing' && <BreathingExercise />}
+                        {activeTab === 'toy' && <ToyBox />}
+                        {activeTab === 'journal' && <GratitudeJournal />}
+                        {activeTab === 'sos' && <EmergencyContact phone={partnerPhone} savePhone={savePhone} />}
+                    </main>
+
+                    <nav className="absolute bottom-6 left-6 right-6 h-20 rounded-[2rem] bg-white/80 backdrop-blur-md shadow-xl border border-white/40 flex justify-between items-center px-6 z-50 max-w-lg mx-auto">
+                        <NavButton icon="home" label="主页" active={activeTab === 'home'} onClick={() => setActiveTab('home')} />
+                        <NavButton icon="wind" label="深呼吸" active={activeTab === 'breathing'} onClick={() => setActiveTab('breathing')} />
+                        <NavButton icon="refresh" label="玩具" active={activeTab === 'toy'} onClick={() => setActiveTab('toy')} />
+                        <NavButton icon="book" label="日记" active={activeTab === 'journal'} onClick={() => setActiveTab('journal')} />
+                        <NavButton icon="phone" label="找我" active={activeTab === 'sos'} highlight onClick={() => setActiveTab('sos')} />
+                    </nav>
+                </div>
+            );
+        };
+
+        const WelcomeScreen = () => (
+            <div className="flex h-screen w-full items-center justify-center bg-gradient-to-br from-rose-50 to-indigo-50">
+                <div className="text-center animate-pulse">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-rose-200 rounded-full blur-xl opacity-50 animate-ping"></div>
+                        <div className="relative mx-auto h-20 w-20 text-rose-300 mb-6 flex items-center justify-center">
+                            <Icon name="heart" size={60} fill="#ffe4e6" />
+                        </div>
+                    </div>
+                    <h1 className="text-3xl font-light text-slate-700 tracking-[0.2em]">心晴花园</h1>
+                    <p className="mt-3 text-slate-400 text-sm font-light">Loading Peace...</p>
+                </div>
+            </div>
+        );
+
+        const NavButton = ({ icon, label, active, onClick, highlight }) => (
+            <button 
+                onClick={onClick}
+                className={`relative flex flex-col items-center gap-1 transition-all duration-500 ${active ? '-translate-y-2' : 'hover:scale-105'}`}
+            >
+                {active && <div className="absolute -top-10 w-1 h-1 bg-slate-400 rounded-full"></div>}
+                <div className={`p-2 rounded-2xl transition-all duration-300 ${active ? (highlight ? 'bg-rose-400 text-white shadow-lg shadow-rose-200' : 'bg-indigo-500 text-white shadow-lg shadow-indigo-200') : (highlight ? 'text-rose-400' : 'text-slate-400')}`}>
+                    <Icon name={icon} size={24} />
+                </div>
+                <span className={`text-[10px] font-medium transition-colors ${active ? 'text-slate-600' : 'text-slate-300'}`}>{label}</span>
+            </button>
+        );
+
+        // --- Views ---
+
+        const HomeView = ({ greeting, changeTab }) => {
+            const [selectedMood, setSelectedMood] = useState(null);
+            const [quote, setQuote] = useState("");
+            
+            const quotes = [
+                "允许自己慢下来，你已经做得够好了。",
+                "情绪像云一样，来了又去，天空依然是蓝的。",
+                "拥抱当下的不完美，那就是真实的可爱。",
+                "你很安全，我很爱你。",
+                "就像植物需要阳光和水，你需要休息和爱。"
+            ];
+
+            useEffect(() => { setQuote(quotes[Math.floor(Math.random() * quotes.length)]); }, []);
+
+            return (
+                <div className="space-y-8 animate-fade-in-up">
+                    <header className="mt-6 px-2">
+                        <h2 className="text-3xl font-light text-slate-800 tracking-wide">{greeting}</h2>
+                        <div className="flex items-center gap-2 mt-2 text-slate-500 text-sm">
+                            <Icon name="feather" size={14} /> 
+                            <span>今天感觉如何？</span>
+                        </div>
+                    </header>
+                    <div className={`${GLASS_STYLE} p-6 rounded-[2rem]`}>
+                        <div className="flex justify-between px-1">
+                            <MoodBtn icon="sun" label="开心" color="text-amber-400" active={selectedMood === 'happy'} onClick={() => setSelectedMood('happy')} />
+                            <MoodBtn icon="smile" label="平静" color="text-teal-400" active={selectedMood === 'calm'} onClick={() => setSelectedMood('calm')} />
+                            <MoodBtn icon="cloud" label="低落" color="text-blue-400" active={selectedMood === 'sad'} onClick={() => setSelectedMood('sad')} />
+                            <MoodBtn icon="moon" label="疲惫" color="text-indigo-400" active={selectedMood === 'tired'} onClick={() => setSelectedMood('tired')} />
+                        </div>
+                        {selectedMood && <div className="mt-5 text-center text-xs text-slate-500 bg-slate-50/50 py-2 rounded-xl animate-fade-in">已记录 · 接纳此刻的自己</div>}
+                    </div>
+                    <button onClick={() => changeTab('breathing')} className="w-full bg-gradient-to-r from-teal-100 to-emerald-100 p-6 rounded-[2rem] shadow-sm flex items-center justify-between group active:scale-[0.98] transition-all">
+                        <div>
+                            <h3 className="text-teal-800 font-medium text-lg">感到焦虑？</h3>
+                            <p className="text-teal-600/80 text-sm mt-1">花 1 分钟平复一下呼吸</p>
+                        </div>
+                        <div className="bg-white/60 p-3 rounded-full text-teal-600 group-hover:scale-110 transition-transform"><Icon name="chevron" /></div>
+                    </button>
+                    <div className="relative p-6 rounded-[2rem] bg-white/40 border border-white/60">
+                        <div className="absolute top-4 left-4 opacity-60 text-amber-400"><Icon name="sparkles" /></div>
+                        <p className="text-slate-600 text-center leading-loose font-serif italic mt-2">"{quote}"</p>
+                    </div>
+                </div>
+            );
+        };
+
+        const MoodBtn = ({ icon, label, color, active, onClick }) => (
+            <button onClick={onClick} className={`flex flex-col items-center gap-3 transition-all duration-300 ${active ? 'scale-110' : 'hover:-translate-y-1 opacity-70 hover:opacity-100'}`}>
+                <div className={`p-4 rounded-2xl shadow-sm transition-all ${active ? 'bg-white shadow-md ring-2 ring-indigo-100' : 'bg-white/50'} ${color}`}>
+                    <Icon name={icon} size={28} />
+                </div>
+                <span className={`text-xs font-medium ${active ? 'text-slate-600' : 'text-slate-400'}`}>{label}</span>
+            </button>
+        );
+
+        const BreathingExercise = () => {
+            const [status, setStatus] = useState('ready'); 
+            const [instruction, setInstruction] = useState('点击圆球开始');
+            
+            const startExercise = async () => {
+                if (status !== 'ready') return;
+                const cycle = async () => {
+                    setStatus('inhale'); setInstruction('吸气 ...'); await new Promise(r => setTimeout(r, 4000));
+                    setStatus('hold'); setInstruction('保持 ...'); await new Promise(r => setTimeout(r, 4000));
+                    setStatus('exhale'); setInstruction('呼气 ...'); await new Promise(r => setTimeout(r, 6000));
+                    cycle();
+                };
+                cycle();
+            };
+
+            return (
+                <div className="h-full flex flex-col items-center pt-10 animate-fade-in space-y-10">
+                    <div className="text-center space-y-2">
+                        <h2 className="text-2xl font-light text-slate-700">4-7-8 呼吸法</h2>
+                        <p className="text-slate-400 text-sm">专注于每一次呼吸的起伏</p>
+                    </div>
+                    <div className="relative flex items-center justify-center py-10">
+                        <div className={`absolute w-72 h-72 rounded-full border border-teal-100 transition-all duration-[4000ms] ${status === 'inhale' ? 'scale-125 opacity-0' : 'scale-50 opacity-0'}`}></div>
+                        <div className={`absolute w-64 h-64 rounded-full bg-teal-50/50 blur-xl transition-all duration-[4000ms] ${status === 'inhale' ? 'scale-110 opacity-80' : 'scale-75 opacity-30'}`}></div>
+                        <button onClick={startExercise} className={`relative w-48 h-48 rounded-full bg-gradient-to-br from-teal-200 to-emerald-300 shadow-[0_10px_40px_-10px_rgba(45,212,191,0.5)] flex items-center justify-center z-10 text-white font-medium text-xl tracking-widest transition-all duration-[4000ms] ease-in-out ${status === 'inhale' ? 'scale-110 shadow-[0_20px_50px_-10px_rgba(45,212,191,0.7)]' : 'scale-90'}`}>
+                            <div className="absolute inset-0 bg-white/20 rounded-full blur-md"></div>
+                            <span className="relative z-10 drop-shadow-md">{status === 'ready' ? '开始' : status === 'inhale' ? '吸气' : status === 'hold' ? '保持' : '呼气'}</span>
+                        </button>
+                    </div>
+                    <div className="h-20 flex flex-col items-center justify-center">
+                        <p className={`text-teal-600 font-medium text-lg transition-opacity duration-1000 ${status === 'ready' ? 'opacity-50' : 'opacity-100'}`}>{instruction}</p>
+                        {status !== 'ready' && <button onClick={() => window.location.reload()} className="mt-4 text-slate-300 text-sm hover:text-slate-500 transition-colors">停止练习</button>}
+                    </div>
+                </div>
+            );
+        };
+
+        const ToyBox = () => {
+            const [currentToy, setCurrentToy] = useState('menu');
+            if (currentToy === 'menu') {
+                return (
+                    <div className="space-y-6 animate-fade-in pt-4">
+                        <header className="px-2">
+                            <h2 className="text-2xl font-light text-slate-800">解压玩具箱</h2>
+                            <p className="text-slate-500 text-sm mt-1">选一个喜欢的方式，释放压力</p>
+                        </header>
+                        <div className="grid grid-cols-1 gap-5">
+                            <ToyCard title="泡泡纸" desc="经典的解压方式" icon="refresh" color="text-blue-500" bg="bg-blue-50/50 hover:bg-blue-100/50" onClick={() => setCurrentToy('bubble')} />
+                            <ToyCard title="电子木鱼" desc="敲一敲，烦恼全消" icon="music" color="text-amber-500" bg="bg-amber-50/50 hover:bg-amber-100/50" onClick={() => setCurrentToy('fish')} />
+                            <ToyCard title="无限开关" desc="感受机械的节奏" icon="toggle" color="text-purple-500" bg="bg-purple-50/50 hover:bg-purple-100/50" onClick={() => setCurrentToy('switch')} />
+                        </div>
+                    </div>
+                );
+            }
+            return (
+                <div className="h-full flex flex-col">
+                    <div className="flex items-center mb-6 pt-4">
+                        <button onClick={() => setCurrentToy('menu')} className="p-2 bg-white rounded-full shadow-sm text-slate-400 hover:text-slate-600 active:scale-90 transition-all"><Icon name="x" size={20} /></button>
+                        <span className="ml-4 font-medium text-slate-600">{currentToy === 'bubble' ? '泡泡纸' : currentToy === 'fish' ? '电子木鱼' : '无限开关'}</span>
+                    </div>
+                    <div className="flex-1 rounded-[2rem] overflow-hidden bg-white/40 border border-white/50 backdrop-blur-sm shadow-inner p-4">
+                        {currentToy === 'bubble' && <BubbleWrap />}
+                        {currentToy === 'fish' && <WoodFish />}
+                        {currentToy === 'switch' && <FidgetSwitch />}
+                    </div>
+                </div>
+            );
+        };
+
+        const ToyCard = ({ title, desc, icon, color, bg, onClick }) => (
+            <button onClick={onClick} className={`w-full p-6 rounded-[2rem] text-left transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center gap-5 border border-white/60 shadow-sm ${bg}`}>
+                <div className={`bg-white p-4 rounded-2xl shadow-sm ring-1 ring-slate-100 ${color}`}><Icon name={icon} /></div>
+                <div><h3 className="font-bold text-slate-700 text-lg">{title}</h3><p className="text-sm text-slate-500 mt-1">{desc}</p></div>
+                <div className="ml-auto text-slate-300"><Icon name="chevron" /></div>
+            </button>
+        );
+
+        const BubbleWrap = () => {
+            const [bubbles, setBubbles] = useState(Array(20).fill(false));
+            const pop = (i) => {
+                if(bubbles[i]) return;
+                const n = [...bubbles]; n[i] = true; setBubbles(n);
+                if(navigator.vibrate) navigator.vibrate(20);
+            };
+            return (
+                <div className="flex flex-col items-center justify-center h-full animate-fade-in">
+                    <div className="grid grid-cols-4 gap-4 p-4">
+                        {bubbles.map((p, i) => (
+                            <button key={i} onClick={() => pop(i)} className={`w-14 h-14 rounded-full transition-all duration-300 ${p ? 'bg-slate-200/50 shadow-inner scale-90' : 'bg-gradient-to-br from-blue-200 to-indigo-200 shadow-lg cursor-pointer hover:scale-105 active:scale-95'}`} />
+                        ))}
+                    </div>
+                    <button onClick={() => setBubbles(Array(20).fill(false))} className="mt-8 text-slate-400 text-sm flex items-center gap-2 hover:text-blue-500 transition-colors"><Icon name="refresh" size={14}/> 换一张新的</button>
+                </div>
+            );
+        };
+
+        const WoodFish = () => {
+            const [count, setCount] = useState(0);
+            const [ripples, setRipples] = useState([]);
+            const knock = () => {
+                setCount(c => c + 1);
+                if(navigator.vibrate) navigator.vibrate(30);
+                const id = Date.now();
+                setRipples(prev => [...prev, { id, x: Math.random() * 60 - 30 }]); 
+                setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 1000);
+            };
+            return (
+                <div className="flex flex-col items-center justify-center h-full animate-fade-in relative">
+                    <div className="absolute top-4 bg-slate-800/5 px-4 py-1 rounded-full text-slate-500 font-mono text-sm">功德: {count}</div>
+                    {ripples.map(r => <div key={r.id} className="absolute top-1/3 text-amber-500 font-bold animate-float-up pointer-events-none" style={{ marginLeft: r.x }}>功德 +1</div>)}
+                    <button onClick={knock} className="active:scale-95 transition-transform duration-100 group">
+                        <div className="w-52 h-44 bg-slate-800 rounded-[3rem] relative shadow-2xl flex items-center justify-center group-active:shadow-lg">
+                            <div className="w-44 h-36 border-2 border-slate-700/50 rounded-[2.5rem] flex items-center justify-center"><div className="w-20 h-2 bg-black/30 rounded-full"></div></div>
+                            <div className="absolute -right-6 -top-12 w-4 h-32 bg-amber-800 rounded-full border-2 border-amber-900 origin-bottom-left transition-transform duration-75 group-active:rotate-[-15deg] group-active:translate-y-4"></div>
+                        </div>
+                    </button>
+                </div>
+            );
+        };
+
+        const FidgetSwitch = () => {
+            const [isOn, setIsOn] = useState(false);
+            const toggle = () => { setIsOn(!isOn); if(navigator.vibrate) navigator.vibrate([40]); }
+            return (
+                <div className={`flex flex-col items-center justify-center h-full animate-fade-in transition-colors duration-500 rounded-3xl ${isOn ? 'bg-slate-800' : 'bg-slate-100'}`}>
+                    <button onClick={toggle} className={`w-32 h-56 rounded-full p-2 transition-all duration-300 shadow-2xl border-4 ${isOn ? 'bg-green-500 border-green-600' : 'bg-slate-300 border-slate-400'}`}>
+                        <div className={`w-full h-1/2 bg-white rounded-full shadow-md transition-all duration-300 transform ${isOn ? 'translate-y-full' : 'translate-y-0'}`}></div>
+                    </button>
+                    <p className={`mt-6 font-mono ${isOn ? 'text-green-400' : 'text-slate-400'}`}>{isOn ? 'ON' : 'OFF'}</p>
+                </div>
+            );
+        };
+
+        const GratitudeJournal = () => {
+            const [entries, setEntries] = useState([]);
+            const [input, setInput] = useState("");
+            const addEntry = () => {
+                if (!input.trim()) return;
+                setEntries([{ id: Date.now(), text: input, date: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }, ...entries]);
+                setInput("");
+            };
+            return (
+                <div className="space-y-6 animate-fade-in h-full flex flex-col pt-4">
+                    <header className="px-2">
+                        <h2 className="text-2xl font-light text-slate-800">心情胶囊</h2>
+                        <p className="text-slate-500 text-sm mt-1">捕捉生活中的每一个小确幸</p>
+                    </header>
+                    <div className={`${GLASS_STYLE} p-4 rounded-[1.5rem]`}>
+                        <textarea className="w-full h-24 p-4 bg-slate-50/50 rounded-xl resize-none outline-none focus:ring-2 focus:ring-indigo-100 text-slate-600 placeholder:text-slate-300 transition-all text-sm" placeholder="今天发生了什么让你稍微开心一点的事？" value={input} onChange={(e) => setInput(e.target.value)}></textarea>
+                        <div className="flex justify-end mt-3"><button onClick={addEntry} disabled={!input.trim()} className="bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm hover:bg-indigo-600 disabled:opacity-50 transition-colors shadow-lg shadow-indigo-200">封存记忆</button></div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto space-y-4 pb-4 px-1">
+                        {entries.length === 0 && <div className="text-center text-slate-300 mt-10"><Icon name="feather" className="mx-auto mb-2 opacity-50" /><p className="text-xs">还没有记录，试着写下一件小事吧</p></div>}
+                        {entries.map(entry => (
+                            <div key={entry.id} className="bg-white/80 p-5 rounded-[1.5rem] border border-white shadow-sm flex gap-4 items-start animate-slide-up">
+                                <div className="bg-rose-100 p-2 rounded-full mt-1 shrink-0"><Icon name="sun" size={14} className="text-rose-500" /></div>
+                                <div><p className="text-slate-600 text-sm leading-relaxed">{entry.text}</p><p className="text-[10px] text-slate-400 mt-2 font-medium bg-slate-100 inline-block px-2 py-1 rounded-lg">{entry.date}</p></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const EmergencyContact = ({ phone, savePhone }) => {
+            const [isEditing, setIsEditing] = useState(!phone);
+            const [tempPhone, setTempPhone] = useState(phone || '');
+            return (
+                <div className="h-full flex flex-col justify-center items-center text-center space-y-8 animate-fade-in px-4">
+                    <div className="space-y-1"><h2 className="text-2xl font-light text-slate-800">当你需要我时</h2><p className="text-slate-400 text-sm">距离只是一个数字，我心就在这里</p></div>
+                    <div className="w-full max-w-xs space-y-6">
+                        {isEditing ? (
+                            <div className={`${GLASS_STYLE} p-6 rounded-[2rem] animate-slide-up`}>
+                                <h3 className="text-sm font-medium text-slate-600 mb-4">设置专属热线</h3>
+                                <input type="tel" placeholder="输入手机号码" value={tempPhone} onChange={(e) => setTempPhone(e.target.value)} className="w-full p-3 bg-slate-50/80 rounded-xl mb-4 text-center text-lg tracking-widest outline-none focus:ring-2 focus:ring-rose-200" />
+                                <button onClick={() => {savePhone(tempPhone); setIsEditing(false)}} className="w-full bg-slate-800 text-white py-3 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all">确认保存</button>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="relative group">
+                                    <div className="absolute inset-0 bg-rose-400 rounded-[2.5rem] blur-xl opacity-30 group-hover:opacity-50 transition-all duration-1000 animate-pulse-slow"></div>
+                                    <a href={`tel:${phone}`} className={`${BUTTON_TOUCH} relative block w-full bg-gradient-to-r from-rose-400 to-rose-500 text-white p-8 rounded-[2.5rem] shadow-xl shadow-rose-200/50 flex flex-col items-center justify-center gap-3 overflow-hidden`}>
+                                        <div className="absolute top-0 left-0 w-full h-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <Icon name="phone" size={40} className="animate-bounce" />
+                                        <span className="font-bold text-xl tracking-wide mt-2">呼叫男朋友</span>
+                                    </a>
+                                </div>
+                                <button onClick={() => setIsEditing(true)} className="text-slate-300 text-xs flex items-center justify-center gap-1 hover:text-slate-500 transition-colors"><Icon name="settings" size={12} /> 修改号码</button>
+                            </>
+                        )}
+                        <div className="bg-white/60 p-6 rounded-[2rem] shadow-sm border border-white/50 text-left space-y-3">
+                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100"><div className="bg-teal-100 p-1 rounded-full"><Icon name="wind" size={14} className="text-teal-600"/></div><span className="text-xs font-bold text-slate-500">紧急着陆技巧 (5-4-3-2-1)</span></div>
+                            <p className="text-xs text-slate-500 leading-relaxed">深呼吸，然后寻找：<br/>5 件你能<span className="text-slate-700 font-medium">看到</span>的东西<br/>4 件你能<span className="text-slate-700 font-medium">触摸</span>的东西<br/>3 种你能<span className="text-slate-700 font-medium">听到</span>的声音<br/>2 种你能<span className="text-slate-700 font-medium">闻到</span>的气味<br/>1 件你<span className="text-slate-700 font-medium">喜欢</span>关于你自己的事</p>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<MindfulGarden />);
+    </script>
+</body>
+</html>
