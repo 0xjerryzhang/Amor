@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌿 温柔疗愈周计划</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cream': '#F9F7F2',
+                        'sage': '#E0E5DF',
+                        'sage-dark': '#94A694',
+                        'dusty-pink': '#EBCBCB',
+                        'soft-blue': '#D4E2E6',
+                        'text-main': '#5A636A',
+                        'text-light': '#9FA6AC'
+                    },
+                    fontFamily: {
+                        'hand': ['"ZCOOL KuaiLe"', 'cursive'],
+                        'sans': ['"Noto Sans SC"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F9F7F2;
+            color: #5A636A;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(148, 166, 148, 0.1);
+            transition: all 0.3s ease;
+        }
+        .card:active {
+            transform: scale(0.98);
+        }
+        .day-btn {
+            transition: all 0.2s ease;
+        }
+        .day-btn.active {
+            background-color: #94A694;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(148, 166, 148, 0.3);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Custom Checkbox */
+        .task-checkbox:checked + div {
+            text-decoration: line-through;
+            color: #C4CACE;
+        }
+        .task-checkbox:checked + div::before {
+            content: "✨ ";
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20 font-sans">
+
+    <!-- Header -->
+    <header class="p-6 pb-2">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-hand text-sage-dark">给自己的拥抱</h1>
+                <p class="text-xs text-text-light mt-1">这不是任务，只是照顾自己的菜单</p>
+            </div>
+            <div class="w-10 h-10 rounded-full bg-sage flex items-center justify-center text-sage-dark">
+                <i class="fas fa-heart"></i>
+            </div>
+        </div>
+    </header>
+
+    <!-- General Advice Card -->
+    <section class="px-4 mb-4">
+        <div class="card p-4 bg-gradient-to-r from-white to-gray-50 border border-sage/30">
+            <h3 class="font-bold text-sm text-sage-dark mb-2"><i class="fas fa-sun mr-1"></i> 通用能量法则</h3>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="bg-yellow-50 p-2 rounded-lg">
+                    <strong>🌞 早晨</strong><br>醒来务必拉开窗帘，让光照进来。
+                </div>
+                <div class="bg-blue-50 p-2 rounded-lg">
+                    <strong>🍲 饮食</strong><br>没胃口就吃流食，不要强迫自己。
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Day Selector (Horizontal Scroll) -->
+    <div class="px-4 mb-4 overflow-x-auto whitespace-nowrap pb-2 scrollbar-hide">
+        <button onclick="renderDay(0)" class="day-btn active inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周一</button>
+        <button onclick="renderDay(1)" class="day-btn inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周二</button>
+        <button onclick="renderDay(2)" class="day-btn inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周三</button>
+        <button onclick="renderDay(3)" class="day-btn inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周四</button>
+        <button onclick="renderDay(4)" class="day-btn inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周五</button>
+        <button onclick="renderDay(5)" class="day-btn inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周六</button>
+        <button onclick="renderDay(6)" class="day-btn inline-block px-4 py-2 rounded-full bg-white text-sm mr-2 shadow-sm border border-transparent">周日</button>
+    </div>
+
+    <!-- Dynamic Content Area -->
+    <main id="daily-content" class="px-4 space-y-4 min-h-[400px]">
+        <!-- Content will be injected here by JS -->
+    </main>
+
+    <!-- Floating SOS Button -->
+    <div class="fixed bottom-6 right-6 z-50">
+        <button onclick="toggleSOS()" class="bg-dusty-pink text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-xl animate-bounce hover:animate-none transition shadow-pink-200">
+            SOS
+        </button>
+    </div>
+
+    <!-- SOS Modal -->
+    <div id="sos-modal" class="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 hidden flex items-center justify-center p-6">
+        <div class="bg-white rounded-2xl w-full max-w-sm p-6 shadow-2xl transform transition-all scale-100 relative">
+            <button onclick="toggleSOS()" class="absolute top-4 right-4 text-gray-400"><i class="fas fa-times"></i></button>
+            <h2 class="text-xl font-hand text-dusty-pink mb-4 text-center">🚨 紧急状态急救</h2>
+            <div class="space-y-3">
+                <div class="p-3 bg-blue-50 rounded-xl text-sm flex items-center">
+                    <span class="text-2xl mr-3">💧</span>
+                    <div>
+                        <strong>喝一大杯冰水</strong>
+                        <p class="text-xs text-gray-500">物理降温，强制唤醒迷走神经。</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-green-50 rounded-xl text-sm flex items-center">
+                    <span class="text-2xl mr-3">🛌</span>
+                    <div>
+                        <strong>裹紧被子/毯子</strong>
+                        <p class="text-xs text-gray-500">模拟拥抱的压力感，找回身体边界。</p>
+                    </div>
+                </div>
+                <div class="p-3 bg-yellow-50 rounded-xl text-sm flex items-center">
+                    <span class="text-2xl mr-3">📱</span>
+                    <div>
+                        <strong>给男朋友看“卡片”</strong>
+                        <p class="text-xs text-gray-500">不用说话，把不想说话卡展示给他。</p>
+                    </div>
+                </div>
+            </div>
+            <button onclick="toggleSOS()" class="w-full mt-5 bg-sage-dark text-white py-2 rounded-xl text-sm">我好一点了</button>
+        </div>
+    </div>
+
+    <!-- Footer for Boyfriend -->
+    <div class="text-center mt-8 pb-8 px-8">
+        <p class="text-[10px] text-gray-400 border-t border-gray-200 pt-4">
+            给男朋友：如果她不想动，请直接把这些食物端到她面前，不需要问“你想吃什么”。
+        </p>
+    </div>
+
+    <script>
+        const weeklyData = [
+            {
+                title: "周一：启动日（允许缓慢）",
+                theme: "今天的目标仅仅是：存在着。",
+                color: "text-blue-600",
+                bg: "bg-blue-50",
+                icon: "fa-power-off",
+                schedule: [
+                    { time: "🌅 早餐", food: "暖胃燕麦粥 + 牛奶", tip: "燕麦富含维B，有助于神经稳定。" },
+                    { time: "☀️ 午餐", food: "西红柿鸡蛋面", tip: "做法简单，酸甜口容易下咽。" },
+                    { time: "🛋️ 调节", act: "什么都不做", tip: "设定闹钟躺平20分钟，这就是一种练习。" },
+                    { time: "🌙 晚餐", food: "菠菜豆腐汤", tip: "清淡饮食，镁元素大餐。" },
+                    { time: "✨ 晚安", act: "听雨声入睡", tip: "打开白噪音App，闭上眼睛。" }
+                ]
+            },
+            {
+                title: "周二：感知日（嗅觉触觉）",
+                theme: "找回一点点感觉。",
+                color: "text-orange-600",
+                bg: "bg-orange-50",
+                icon: "fa-hand-sparkles",
+                schedule: [
+                    { time: "🌅 早餐", food: "全麦吐司 + 香蕉", tip: "香蕉是快乐水果。" },
+                    { time: "☀️ 午餐", food: "煎三文鱼/鱼排", tip: "Omega-3是对抗抑郁的黄金。" },
+                    { time: "🛋️ 调节", act: "香气疗法/闻橘子皮", tip: "剥一个橘子，深深地闻它的味道。" },
+                    { time: "🌙 晚餐", food: "小米南瓜粥", tip: "金黄色带来温暖感。" },
+                    { time: "✨ 晚安", act: "热水澡/泡脚", tip: "感受水流过皮肤的温度。" }
+                ]
+            },
+            {
+                title: "周三：微动日",
+                theme: "只要动两分钟就好。",
+                color: "text-green-600",
+                bg: "bg-green-50",
+                icon: "fa-walking",
+                schedule: [
+                    { time: "🌅 早餐", food: "煮鸡蛋 + 热豆浆", tip: "补充蛋白质。" },
+                    { time: "☀️ 午餐", food: "咖喱鸡肉饭", tip: "姜黄素抗炎，香气打开胃口。" },
+                    { time: "🛋️ 调节", act: "躺在地板上", tip: "把腿靠在墙上（倒箭式）5分钟。" },
+                    { time: "🌙 晚餐", food: "简单三明治", tip: "不想开火就吃冷的。" },
+                    { time: "✨ 晚安", act: "状态打分", tip: "给今天打个分（1-10），不用写原因。" }
+                ]
+            },
+            {
+                title: "周四：表达日",
+                theme: "不想说话，就用手表达。",
+                color: "text-purple-600",
+                bg: "bg-purple-50",
+                icon: "fa-pen-nib",
+                schedule: [
+                    { time: "🌅 早餐", food: "酸奶碗 + 蓝莓", tip: "浆果抗氧化。" },
+                    { time: "☀️ 午餐", food: "小馄饨/水饺", tip: "带汤水的食物抚慰肠胃。" },
+                    { time: "🛋️ 调节", act: "乱涂乱画/撕纸", tip: "把烦躁通过手释放出去。" },
+                    { time: "🌙 晚餐", food: "清蒸虾 + 西兰花", tip: "清淡健康。" },
+                    { time: "✨ 晚安", act: "无脑动画片", tip: "看《猫和老鼠》或《小丸子》。" }
+                ]
+            },
+            {
+                title: "周五：自然日",
+                theme: "像植物一样呼吸。",
+                color: "text-teal-600",
+                bg: "bg-teal-50",
+                icon: "fa-leaf",
+                schedule: [
+                    { time: "🌅 早餐", food: "杂粮粥/八宝粥", tip: "罐装的也可以，方便第一。" },
+                    { time: "☀️ 午餐", food: "牛肉饭/炒饭", tip: "红肉补充铁质，防止疲乏。" },
+                    { time: "🛋️ 调节", act: "看天空/云朵", tip: "在窗边站5分钟，或者下楼摸摸树叶。" },
+                    { time: "🌙 晚餐", food: "热牛奶 + 黑巧", tip: "黑巧能改善情绪。" },
+                    { time: "✨ 晚安", act: "换洗床品", tip: "换一套最舒服的棉质睡衣。" }
+                ]
+            },
+            {
+                title: "周六：依赖日",
+                theme: "接受男朋友的全然照顾。",
+                color: "text-pink-600",
+                bg: "bg-pink-50",
+                icon: "fa-user-friends",
+                schedule: [
+                    { time: "🌅 早餐", food: "男朋友特供", tip: "让他买你最想吃的，床上吃。" },
+                    { time: "☀️ 午餐", food: "家里吃火锅", tip: "热气腾腾，随意吃。" },
+                    { time: "🛋️ 调节", act: "平行陪伴", tip: "他在旁边看书，你刷手机，不说话。" },
+                    { time: "🌙 晚餐", food: "随意/零食", tip: "周末不需要规则。" },
+                    { time: "✨ 晚安", act: "男朋友按摩", tip: "按按肩膀，放松肌肉。" }
+                ]
+            },
+            {
+                title: "周日：重启日",
+                theme: "把焦虑清零。",
+                color: "text-indigo-600",
+                bg: "bg-indigo-50",
+                icon: "fa-redo",
+                schedule: [
+                    { time: "🌅 早餐", food: "松饼/蛋糕", tip: "给自己的甜蜜奖励。" },
+                    { time: "☀️ 午餐", food: "菌菇汤", tip: "鲜美，富含微量元素。" },
+                    { time: "🛋️ 调节", act: "只整理三个角落", tip: "桌面、床头、沙发角。" },
+                    { time: "🌙 晚餐", food: "清淡饮食", tip: "为周一做准备。" },
+                    { time: "✨ 晚安", act: "大脑大扫除", tip: "把烦恼写在纸上，揉成团扔掉。" }
+                ]
+            }
+        ];
+
+        function renderDay(index) {
+            // Update Buttons
+            const buttons = document.querySelectorAll('.day-btn');
+            buttons.forEach((btn, i) => {
+                if(i === index) {
+                    btn.classList.add('active', 'bg-sage-dark', 'text-white');
+                    btn.classList.remove('bg-white', 'text-sm');
+                } else {
+                    btn.classList.remove('active', 'bg-sage-dark', 'text-white');
+                    btn.classList.add('bg-white', 'text-sm');
+                }
+            });
+
+            // Render Content
+            const data = weeklyData[index];
+            const container = document.getElementById('daily-content');
+            
+            let html = `
+                <div class="card p-5 fade-in mb-20">
+                    <div class="flex items-center mb-4 pb-3 border-b border-gray-100">
+                        <div class="w-10 h-10 rounded-full ${data.bg} ${data.color} flex items-center justify-center mr-3 text-lg">
+                            <i class="fas ${data.icon}"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-lg text-gray-700 font-hand">${data.title}</h2>
+                            <p class="text-xs text-gray-400">${data.theme}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-4">
+            `;
+
+            data.schedule.forEach(item => {
+                html += `
+                    <div class="flex group">
+                        <div class="mr-3 pt-1">
+                            <input type="checkbox" class="task-checkbox w-5 h-5 rounded-full border-gray-300 text-sage-dark focus:ring-sage-dark cursor-pointer appearance-none border checked:bg-sage-dark checked:border-transparent transition">
+                        </div>
+                        <div class="transition-all duration-300">
+                            <div class="text-xs font-bold text-gray-400 mb-0.5">${item.time}</div>
+                            <div class="text-sm font-medium text-gray-700">${item.food || item.act}</div>
+                            <div class="text-xs text-gray-400 mt-0.5">${item.tip}</div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div></div>`;
+            container.innerHTML = html;
+        }
+
+        function toggleSOS() {
+            const modal = document.getElementById('sos-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Initialize with Monday (0) or current day
+        const today = new Date().getDay();
+        // Convert JS day (0=Sun, 1=Mon) to our array index (0=Mon, 6=Sun)
+        let initialIndex = today === 0 ? 6 : today - 1;
+        if (initialIndex < 0) initialIndex = 0; // Fallback
+        
+        renderDay(initialIndex);
+
+    </script>
+</body>
+</html>
